@@ -14,11 +14,11 @@ void InitLcd1602();
 void LcdShowStr(unsigned char x, unsigned char y, unsigned char *str);
 
 void main() {
-	unsigned char str[] = "Litong Deng,";
+	unsigned char str[] = "ABCDEFGHIJKLMNOPQRST";
 
 	InitLcd1602();
-	LcdShowStr(2, 0, str);
-	LcdShowStr(0, 1, "Welcom to K8051!");
+	LcdShowStr(0, 0, str);
+	LcdShowStr(0, 1, "Welcome ^_^!");
 
 	while (1) {
 	}
