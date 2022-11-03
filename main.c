@@ -37,13 +37,12 @@ void main() {
 		if (DATA_CNT == 16) {
 			LcdSetCursor(0, 1);
 		}
-		if (DATA_CNT >= 32) {
+		if (DATA_CNT == 32) {
 			DATA_CNT = 0;
 			// 数据指针清零，所有显示清零
-			LcdWriteCmd(0x01);
+			InitLcd1602();
 			// LcdSetCursor(0, 0);
 		}
-		
 	}
 }
 
@@ -134,12 +133,10 @@ void ConfigUART(unsigned int baud) {
 void InterruptUART() interrupt 4 {
 	// 如果是接收中断标志位
 	if (RI) {
-		RI = 0;	
-		SBUF = SBUF;
-		// LcdSetCursor(DATA_CNT%16, DATA_CNT/16);
-		LcdWriteData(SBUF);
-		
+		RI = 0;
 		DATA_CNT++;
+		LcdWriteData(SBUF);
+		SBUF = SBUF;
 	}
 	// 如果是发送中断标志位
 	if (TI) {
