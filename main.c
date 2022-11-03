@@ -11,16 +11,39 @@ sbit LCD1602_RW = P1 ^ 1;
 sbit LCD1602_RS = P1 ^ 0;
 
 void InitLcd1602();
+void LcdSetCursor(unsigned char x, unsigned char y);
 void LcdShowStr(unsigned char x, unsigned char y, unsigned char *str);
+
+void ConfigUART(unsigned int baud);
+unsigned char DATA_CNT = 0;
 
 void main() {
 	unsigned char str[] = "ABCDEFGHIJKLMNOPQRST";
 
 	InitLcd1602();
-	LcdShowStr(0, 0, str);
-	LcdShowStr(0, 1, "Welcome ^_^!");
+
+	EA = 1; // enable global interrupt
+	ConfigUART(9600);
+
+	// 因为教学班子上使用串口来烧录程序+液晶显示屏读写指令/数据
+	// 所以第一次点亮的时候液晶显示屏的显示不是清空的，
+	// 再重启一次板子就可以清空了
+	LcdSetCursor(0, 0);
+
+	// LcdShowStr(0, 0, str);
+	// LcdShowStr(0, 1, "`!@#$%^&*()_+");
 
 	while (1) {
+		if (DATA_CNT == 16) {
+			LcdSetCursor(0, 1);
+		}
+		if (DATA_CNT >= 32) {
+			DATA_CNT = 0;
+			// 数据指针清零，所有显示清零
+			LcdWriteCmd(0x01);
+			// LcdSetCursor(0, 0);
+		}
+		
 	}
 }
 
@@ -58,7 +81,7 @@ void InitLcd1602() {
 	// 设置 16x2 显示，5x7点阵，8位数据接口
 	LcdWriteCmd(0x38);
 	// 设置显示开，不显示光标
-	LcdWriteCmd(0x0C);
+	LcdWriteCmd(0x0D);
 	// 当读写一个字符后地址指针加一，且光标加一
 	LcdWriteCmd(0x06);
 	// 数据指针清零，所有显示清零
@@ -74,6 +97,7 @@ void LcdSetCursor(unsigned char x, unsigned char y) {
 	} else {
 		addr = 0x40 + x;
 	}
+	// 设置数据地址指针
 	LcdWriteCmd(0x80 | addr);
 }
 
@@ -91,5 +115,34 @@ void LcdShowStr(unsigned char x, unsigned char y, unsigned char *str) {
 	while (*str != '\0') {
 		LcdWriteData(*str);
 		str++;
+	}
+}
+
+void ConfigUART(unsigned int baud) {
+	// SCON 0101 0000
+	// SM1=1, REN=1，串行通信模式1
+	SCON = 0x50;
+	TMOD &= 0x0F; // Timer1
+	TMOD |= 0x20; // Reload mode
+	TH1 = 256 - (11059200/12/32)/baud;
+	TL1 = TH1;
+	ET1 = 0; // 使能T1作为波特率发生器，而禁止T1用作定时器
+	ES = 1; // 使能串口中断
+	TR1 = 1; // start T1
+}
+
+void InterruptUART() interrupt 4 {
+	// 如果是接收中断标志位
+	if (RI) {
+		RI = 0;	
+		SBUF = SBUF;
+		// LcdSetCursor(DATA_CNT%16, DATA_CNT/16);
+		LcdWriteData(SBUF);
+		
+		DATA_CNT++;
+	}
+	// 如果是发送中断标志位
+	if (TI) {
+		TI = 0;
 	}
 }
